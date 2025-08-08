@@ -1,0 +1,26 @@
+name: Deploy on push
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Point repo remote to use GitHub token
+        working-directory: /home/notadmin/dockerfiles/lms-mvp
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/XxShadowofLightxX/LMS_MVP.git
+
+      - name: Pull latest code
+        working-directory: /home/notadmin/dockerfiles/lms-mvp
+        run: |
+          git fetch --all
+          git reset --hard origin/main
+
+      - name: Build & restart containers
+        working-directory: /home/notadmin/dockerfiles/lms-mvp
+        run: |
+          docker compose up -d --build
+          docker system prune -f
