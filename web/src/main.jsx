@@ -13,7 +13,7 @@ function App() {
   };
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>
-      <h1>LMS Frontend placeholder ✅</h1>
+      <h1>LMS Frontend placeholder 🚀</h1>
       <p>API base: {import.meta.env.VITE_API_BASE_URL || "(not set)"}</p>
       <button onClick={ping}>Ping API</button>
       <pre>{status}</pre>
