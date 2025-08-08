@@ -1,0 +1,84 @@
+version: "3.9"
+name: lms-mvp
+
+networks:
+  proxy:
+    external: true
+    name: nginx_nginx_proxy
+  app:
+    driver: bridge
+
+volumes:
+  pgdata:
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [app]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    networks:
+      - app
+      - proxy
+    expose:
+      - "80"
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: development
+      PORT: 8081
+      # UPLOAD_DIR: /data/uploads   # uncomment when we add file storage
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [app, proxy]
+    expose:
+      - "8081"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: ./web
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+      PORT: 3001
+      HOST: 0.0.0.0
+    depends_on:
+      api:
+        condition: service_started
+    networks: [app, proxy]
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3001 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
